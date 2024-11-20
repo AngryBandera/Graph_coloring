@@ -20,11 +20,31 @@ def create_knf(
 
 
 def create_implication_graph(knf: list[tuple[int, int]], vertexes_count: int) -> list[list[int]]:
-    '''
-    ...
-    '''
+    """
+    This function takes KNF and returns implication graph
 
-    return []
+    Args:
+        knf (list[tuple[int, int]]): knf
+        vertexes_count (int): number of tuples in knf
+
+    Returns:
+        list[list[int]]: implication graph
+        
+    >>> create_implication_graph([(1, 2), (2, 3), (3, 1)], 18)
+    [[], [], [], [], [], [], [], [], [], [], [2], [3], [1], [], [], [], [], []]
+    >>> create_implication_graph([(1, 2), (2, 3), (3, 1), (4, 2), (5, 1)], 30)
+    [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [2], [3], \
+[1], [2], [1], [], [], [], [], [], [], [], [], []]
+    """
+    lst = []
+    for _ in range(vertexes_count):
+        lst.append([])
+
+    for tpl in knf:
+        indx = (tpl[0] + (vertexes_count / 2)) % vertexes_count
+        lst[int(indx)].append(tpl[1])
+
+    return lst
 
 
 def color_graph(implication_graph: list[list[int]]) -> list[int]:
