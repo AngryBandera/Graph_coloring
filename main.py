@@ -5,11 +5,34 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 def read_file(filepath: str) -> list[tuple[list[int], int]]:
-    '''
-    ...
-    '''
+    """_summary_
 
-    return []
+    Args:
+        filepath (str): path to file
+
+    Returns:
+        list[tuple[list[int], int]]: list with vertex and colors
+    >>> read_file(123)
+    False
+    """ 
+    if not isinstance(filepath, str):
+        return False
+    final = []
+    output = []
+    with open(filepath, 'r', encoding="utf-8") as file:
+        lines = file.readlines()
+        f = lines[1]
+        for i in f:
+            i = i.strip()
+            if i.isdigit():
+                final.append([[], int(i)])
+        for line in lines[2:]:
+            number, nimber = map(int, line.strip().split(','))
+            final[number - 1][0].append(nimber - 1)
+            final[nimber - 1][0].append(number - 1)
+        for lst in final:
+            output.append((lst[0], lst[1]))
+    return output
 
 
 def create_knf(
