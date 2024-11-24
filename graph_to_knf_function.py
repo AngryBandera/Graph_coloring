@@ -12,7 +12,8 @@ def create_knf(
  (12, 15), (13, 16), (14, 17),\
  (12, 18), (13, 19), (14, 20),\
  (15, 21), (16, 22), (17, 23),\
- (18, 21), (19, 22), (20, 23)]
+ (18, 21), (19, 22), (20, 23),\
+ (13, 13), (15, 15), (20, 20), (21, 21)]
     '''
     knf = []
     kolors = [0,1,2]
@@ -34,6 +35,9 @@ def create_knf(
     for connection in connection_between_nodes:
         for kol in kolors:
             knf.append((connection[0]*3+kol+len(graph)*3,(connection[1]*3+kol+len(graph)*3)))
+    #Умова змінності кольорів#
+    for node,info_node in enumerate(graph):
+        knf.append((node*3+info_node[1]+len(graph)*3, node*3+info_node[1]+len(graph)*3))
     return knf
 
 if __name__ == '__main__':
