@@ -62,6 +62,7 @@ def find_solution(implication_graph: list[list[int]]) -> list[bool] | None:
                     break
 
                 scc_result[elem] = scc_counter
+                in_stack[elem] = False
                 vertices_stack.pop()
 
             scc_counter += 1
