@@ -38,9 +38,30 @@ def find_solution(implication_graph: list[list[int]]) -> list[bool] | None:
         (list[bool] | None): list of booleans, where each element
         representing value of corresponding vertex in implication graph
         or None if such coloring is impossible
+
+    Examples:
+        >>> find_solution([[5], [2], [3], [1], [0], [4]])
+        [True, False, False, False, True, True]
+        >>> find_solution([[1], [0]]) is None
+        True
+        >>> find_solution([[], []])
+        [True, False]
     '''
 
+    n = len(implication_graph)
+
+    vertexes_counter = 0
+    scc_counter = 0
+    disc = [-1] * n
+    low = [-1] * n
+    vertices_stack = []
+    in_stack = [False] * n
+    scc_result = [-1] * n
+
     def tarjan_scc(vertex: int):
+        nonlocal vertexes_counter
+        nonlocal scc_counter
+
         disc[vertex] = vertexes_counter
         low[vertex] = vertexes_counter
         vertices_stack.append(vertex)
@@ -66,16 +87,6 @@ def find_solution(implication_graph: list[list[int]]) -> list[bool] | None:
 
             scc_counter += 1
 
-    n = len(implication_graph)
-
-    vertexes_counter = 0
-    scc_counter = 0
-    disc = [-1] * n
-    low = [-1] * n
-    vertices_stack = []
-    in_stack = [False] * n
-    scc_result = [-1] * n
-
     for i in range(n):
         if disc[i] == -1:
             tarjan_scc(i)
@@ -94,7 +105,7 @@ def find_solution(implication_graph: list[list[int]]) -> list[bool] | None:
 def color_graph(cnf_solution: list[bool] | None) -> list[int] | None:
     '''
     Returns graph colors as a list of numbers, one number per vertex,
-    each number is from 1 to 3 inclusively.
+    each number is from 0 to 2 inclusively.
     If such coloring is impossible, returns None
 
     Args:
@@ -103,17 +114,17 @@ def color_graph(cnf_solution: list[bool] | None) -> list[int] | None:
         or None if solution does not exist
 
     Returns:
-        (list[int] | None): list of graph vertexes colors, each number is from 1 to 3 inclusively
+        (list[int] | None): list of graph vertexes colors, each number is from 0 to 2 inclusively
         or None if such coloring is impossible
 
     Examples:
     >>> color_graph([True, False, False, False, True, True])
-    [1]
+    [0]
     >>> color_graph([\
         False, False, True, True, True, False,\
         False, True, False, True, False, True\
     ])
-    [3, 2]
+    [2, 1]
     '''
 
     if cnf_solution is None:
@@ -123,7 +134,7 @@ def color_graph(cnf_solution: list[bool] | None) -> list[int] | None:
     for i in range(0, len(cnf_solution), 6):
         for j in range(0, 3):
             if cnf_solution[i + j]:
-                coloring.append(j + 1)
+                coloring.append(j)
                 break
 
     return coloring
