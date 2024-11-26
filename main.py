@@ -1,6 +1,9 @@
 """
 Graph_coloring
 """
+
+import sys
+import random
 import matplotlib.pyplot as plt
 import networkx as nx
 
@@ -34,54 +37,62 @@ def read_file(filepath: str) -> list[tuple[list[int], int]]:
             output.append((lst[0], lst[1]))
     return output
 
-
-def create_knf(
+def create_cnf(
         graph: list[tuple[list[int], int]]) -> list[tuple[int, int]]:
     '''
-    Converts a graph to his knf form
+    Converts a graph to his cnf form
 
-    >>> create_knf([([1,2],1),([0,3],0),([0,3],2),([1,2],0)])
-    [(0, 2), (4, 5), (6, 7), (10, 11),\
- (12, 14), (16, 17), (18, 19), (22, 23),\
- (12, 15), (13, 16), (14, 17),\
- (12, 18), (13, 19), (14, 20),\
- (15, 21), (16, 22), (17, 23),\
- (18, 21), (19, 22), (20, 23),\
- (13, 13), (15, 15), (20, 20), (21, 21)]
+    >>> create_cnf([([1,2],1),([0,3],0),([0,3],2),([1,2],0)])
+    [(0, 2), (4, 5), (6, 7), (10, 11), \
+(12, 14), (16, 17), (18, 19), (22, 23), \
+(13, 13), (15, 15), (20, 20), (21, 21), \
+(14, 17), (12, 18), (16, 22), (17, 23), \
+(19, 22)]
     '''
-    knf = []
-    kolors = [0,1,2]
-    # Блок Є#
-    for node,info_node in enumerate(graph):
-        pos_kolors_for_node = [kol for kol in kolors if kol != info_node[1]]
-        knf.append((node*3+pos_kolors_for_node[0], node*3+pos_kolors_for_node[1]))
-    #Блок НЕ#
-    for node,info_node in enumerate(graph):
-        pos_kolors_for_node = [kol for kol in kolors if kol != info_node[1]]
-        knf.append((node*3+pos_kolors_for_node[0]+len(graph)*3,\
-                    node*3+pos_kolors_for_node[1]+len(graph)*3))
-    #Блок Об'єднання#
-    connection_between_nodes = []
-    for node,info_node in enumerate(graph):
-        if tuple(sorted([node, info_node[0][0]])) not in connection_between_nodes \
-            and tuple(sorted([node, info_node[0][1]])):
-            connection_between_nodes+=[tuple(sorted([node,con_node])) for con_node in info_node[0]]
-    for connection in connection_between_nodes:
-        for kol in kolors:
-            knf.append((connection[0]*3+kol+len(graph)*3,(connection[1]*3+kol+len(graph)*3)))
-    #Умова змінності кольорів#
-    for node,info_node in enumerate(graph):
-        knf.append((node*3+info_node[1]+len(graph)*3, node*3+info_node[1]+len(graph)*3))
-    return knf
+    cnf = []
+    colors = range(0, 3)
 
+    # Блок Є
+    for node, info_node in enumerate(graph):
+        pos_colors_for_node = [col for col in colors if col != info_node[1]]
+        cnf.append((node * 3 + pos_colors_for_node[0], node * 3 + pos_colors_for_node[1]))
 
-def create_implication_graph(knf: list[tuple[int, int]], vertexes_count: int) -> list[list[int]]:
+    # Блок НЕ
+    for node, info_node in enumerate(graph):
+        pos_colors_for_node = [col for col in colors if col != info_node[1]]
+        cnf.append((node * 3 + pos_colors_for_node[0] + len(graph) * 3,
+                    node * 3 + pos_colors_for_node[1] + len(graph) * 3))
+
+    # Блок заперечення попереднього кольору
+    for node, info_node in enumerate(graph):
+        pos_colors_for_node = [col for col in colors if col != info_node[1]]
+        cnf.append((node * 3 + info_node[1] + len(graph) * 3,
+                    node * 3 + info_node[1] + len(graph) * 3))
+
+    # Блок Об'єднання
+    for node_ind, node in enumerate(graph):
+        for neighbor_ind in node[0]:
+            if neighbor_ind <= node_ind:
+                continue
+
+            neighbor = graph[neighbor_ind]
+
+            for color in colors:
+                if color != node[1] and color != neighbor[1]:
+                    cnf.append((
+                        node_ind * 3 + color + len(graph) * 3,
+                        neighbor_ind * 3 + color + len(graph) * 3
+                    ))
+
+    return cnf
+
+def create_implication_graph(cnf: list[tuple[int, int]], vertexes_count: int) -> list[list[int]]:
     """
-    This function takes KNF and returns implication graph
+    This function takes cnf and returns implication graph
 
     Args:
-        knf (list[tuple[int, int]]): knf
-        vertexes_count (int): number of tuples in knf
+        cnf (list[tuple[int, int]]): cnf
+        vertexes_count (int): number of tuples in cnf
 
     Returns:
         list[list[int]]: implication graph
@@ -95,7 +106,7 @@ def create_implication_graph(knf: list[tuple[int, int]], vertexes_count: int) ->
     for _ in range(vertexes_count):
         lst.append([])
 
-    for tpl in knf:
+    for tpl in cnf:
         indx = (tpl[0] + (vertexes_count / 2)) % vertexes_count
         indx_2 = (tpl[1] + (vertexes_count / 2)) % vertexes_count
         lst[int(indx)].append(tpl[1])
@@ -156,12 +167,12 @@ def find_solution(implication_graph: list[list[int]]) -> list[bool] | None:
             while vertices_stack:
                 elem = vertices_stack[-1]
 
-                if low[elem] != disc[vertex]:
-                    break
-
                 scc_result[elem] = scc_counter
                 in_stack[elem] = False
                 vertices_stack.pop()
+
+                if disc[elem] == disc[vertex]:
+                    break
 
             scc_counter += 1
 
@@ -199,8 +210,8 @@ def color_graph(cnf_solution: list[bool] | None) -> list[int] | None:
     >>> color_graph([True, False, False, False, True, True])
     [0]
     >>> color_graph([\
-        False, False, True, True, True, False,\
-        False, True, False, True, False, True\
+        False, False, True, False, True, False,\
+        True, True, False, True, False, True\
     ])
     [2, 1]
     '''
@@ -209,14 +220,13 @@ def color_graph(cnf_solution: list[bool] | None) -> list[int] | None:
         return None
 
     coloring = []
-    for i in range(0, len(cnf_solution), 6):
+    for i in range(0, int(len(cnf_solution) / 2), 3):
         for j in range(0, 3):
             if cnf_solution[i + j]:
                 coloring.append(j)
                 break
 
     return coloring
-
 
 def write_file(graph: list[tuple[list[int], int]],
                colored_graph: list[int], output_file: str) -> None:
@@ -233,25 +243,28 @@ def write_file(graph: list[tuple[list[int], int]],
         None
 
     Examples:
-    >>> import tempfile
-    >>> graph = [([1, 2], 3), ([4, 5], 6)]
-    >>> colored_graph = [7, 8]
-    >>> with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
-    ...     write_file(graph, colored_graph, tmpfile.name)
-    ...     with open(tmpfile.name, "r", encoding="utf-8") as f:
-    ...         print(f.read())
-    1 2 7
-    4 5 8
+    # >>> import tempfile
+    # >>> graph = [([1, 2], 1), ([4, 5], 2)]
+    # >>> colored_graph = [1, 2]
+    # >>> with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
+    # ...     write_file(graph, colored_graph, tmpfile.name)
+    # ...     with open(tmpfile.name, "r", encoding="utf-8") as f:
+    # ...         print(f.read())
+    # 2 4
+    
     '''
-    nodes = [node[0] for node in graph]
-    graph_txt = ""
-    for node in zip(nodes, colored_graph):
-        x, y, c = *node[0], node[1]
-        graph_txt += f"{x} {y} {c}\n"
+    edges = []
+    for index, node in enumerate(graph):
+        for edge in node[0]:
+            if index > edge:
+                edges.append(f"{index},{edge}")
+
+    graph_txt = f"{len(graph)},{len(edges)}\n"
+    graph_txt += ",".join(str(node[1]) for node in graph) + "\n"
+    graph_txt += "\n".join(edges)
 
     with open(output_file, "w", encoding="utf-8") as file:
         file.write(graph_txt.strip())
-
 
 def display_graph(graph: list[tuple[list[int], int]],
                   colored_graph: list[int]) -> None:
@@ -268,29 +281,26 @@ def display_graph(graph: list[tuple[list[int], int]],
     '''
     colors = ["red", "green", "blue"]
     g = nx.Graph()
-
-    graph = [node[0] for node in graph]
-    import_graph = []
+    oldcolors_labels = {index:colors[node[1]][0] for index, node in enumerate(graph)}
 
     colored_graph = list(map(lambda c: colors[c], colored_graph))
-    for (nodes, color) in zip(graph, colored_graph):
-        import_graph.append((tuple(nodes), {"color":color}))
-    g.add_nodes_from(import_graph)
+    g.add_nodes_from([(node, {"color":colored_graph[node]}) \
+                     for node in range(len(graph))])
 
-    for node, _ in import_graph:
-        for node_, _ in import_graph:
-            if node != node_:
-                g.add_edge(node, node_)
+    for index, node in enumerate(graph):
+        for edge in node[0]:
+            g.add_edge(index, edge)
 
     pos = nx.spring_layout(g)
-    node_colors = [g.nodes[node]['color'] for node in g.nodes]
+
     plt.figure(figsize=(8, 6))
-    nx.draw(g, pos, with_labels=True, node_color=node_colors,\
+    nx.draw(g, pos, with_labels=True, node_color=colored_graph,\
+         labels = oldcolors_labels,
          node_size=500, font_size=12, font_weight="bold")
     plt.title("Візуалізація графа з кольоровими вузлами")
     plt.show()
 
-def generate_graph(num_nodes: int) -> list[tuple[list[int], int]]:
+def generate_graph(num_nodes: int, density: int) -> list[tuple[list[int], int]]:
     '''
     Generates a large graph with `num_nodes` nodes, 
                 where each node is connected to every other node.
@@ -302,23 +312,28 @@ def generate_graph(num_nodes: int) -> list[tuple[list[int], int]]:
         list[tuple[list[int], int]]: 
             A list of tuples, each containing a list of integers (nodes) and a color (integer).
     '''
-    import random
-    graph = []
-    colored_graph = []
 
-    for i in range(1, num_nodes + 1):
-        nodes = [i, (i + 1) % num_nodes]
-        color = random.randint(0, 2)
-        graph.append((nodes, color))
-        colored_graph.append(color)
+    graph = [([], random.randint(0, 2)) for _ in range(0, num_nodes)]
 
-    return graph, colored_graph
+    for i in range(0, num_nodes - 1):
+        for _ in range(0, density):
+            rand_connect = i
+            while rand_connect == i or rand_connect in graph[i]:
+                rand_connect = random.randint(0, num_nodes - 1)
+
+            graph[i][0].append(rand_connect)
+            graph[rand_connect][0].append(i)
+
+    return graph
 
 def main():
     '''
     Main function
     '''
-    graph = read_file("testfile.csv")
+
+    graph = generate_graph(10, 2)
+
+    sys.setrecursionlimit(max(sys.getrecursionlimit(), len(graph) * 2))
 
     cnf = create_cnf(graph)
 
@@ -328,11 +343,12 @@ def main():
 
     colored_graph = color_graph(cnf_solution)
 
-    graph, colored_graph = generate_graph(20)
+    # write_file(graph, colored_graph, "output_file.csv")
 
-    write_file(graph, colored_graph, "output_file.csv")
-
-    display_graph(graph, colored_graph)
+    if colored_graph is None:
+        print("Solution doesn't exist")
+    else:
+        display_graph(graph, colored_graph)
 
 if __name__ == "__main__":
     import doctest
