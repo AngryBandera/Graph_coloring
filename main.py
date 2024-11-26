@@ -36,12 +36,43 @@ def read_file(filepath: str) -> list[tuple[list[int], int]]:
 
 
 def create_knf(
-        graph: list[tuple[list[int], int]]) -> list[tuple[int], int]:
+        graph: list[tuple[list[int], int]]) -> list[tuple[int, int]]:
     '''
-    ...
-    '''
+    Converts a graph to his knf form
 
-    return []
+    >>> create_knf([([1,2],1),([0,3],0),([0,3],2),([1,2],0)])
+    [(0, 2), (4, 5), (6, 7), (10, 11),\
+ (12, 14), (16, 17), (18, 19), (22, 23),\
+ (12, 15), (13, 16), (14, 17),\
+ (12, 18), (13, 19), (14, 20),\
+ (15, 21), (16, 22), (17, 23),\
+ (18, 21), (19, 22), (20, 23),\
+ (13, 13), (15, 15), (20, 20), (21, 21)]
+    '''
+    knf = []
+    kolors = [0,1,2]
+    # Блок Є#
+    for node,info_node in enumerate(graph):
+        pos_kolors_for_node = [kol for kol in kolors if kol != info_node[1]]
+        knf.append((node*3+pos_kolors_for_node[0], node*3+pos_kolors_for_node[1]))
+    #Блок НЕ#
+    for node,info_node in enumerate(graph):
+        pos_kolors_for_node = [kol for kol in kolors if kol != info_node[1]]
+        knf.append((node*3+pos_kolors_for_node[0]+len(graph)*3,\
+                    node*3+pos_kolors_for_node[1]+len(graph)*3))
+    #Блок Об'єднання#
+    connection_between_nodes = []
+    for node,info_node in enumerate(graph):
+        if tuple(sorted([node, info_node[0][0]])) not in connection_between_nodes \
+            and tuple(sorted([node, info_node[0][1]])):
+            connection_between_nodes+=[tuple(sorted([node,con_node])) for con_node in info_node[0]]
+    for connection in connection_between_nodes:
+        for kol in kolors:
+            knf.append((connection[0]*3+kol+len(graph)*3,(connection[1]*3+kol+len(graph)*3)))
+    #Умова змінності кольорів#
+    for node,info_node in enumerate(graph):
+        knf.append((node*3+info_node[1]+len(graph)*3, node*3+info_node[1]+len(graph)*3))
+    return knf
 
 
 def create_implication_graph(knf: list[tuple[int, int]], vertexes_count: int) -> list[list[int]]:
@@ -72,13 +103,119 @@ def create_implication_graph(knf: list[tuple[int, int]], vertexes_count: int) ->
 
     return lst
 
-
-def color_graph(implication_graph: list[list[int]]) -> list[int]:
+def find_solution(implication_graph: list[list[int]]) -> list[bool] | None:
     '''
-    ...
+    Returns solution for the 2-SAT problem, which is represented in implication graph form
+    If there are no such solution, returns None
+
+    Args:
+        implication_graph (list[list[int]]): corresponding implication graph to solve problem for
+
+    Returns:
+        (list[bool] | None): list of booleans, where each element
+        representing value of corresponding vertex in implication graph
+        or None if such coloring is impossible
+
+    Examples:
+        >>> find_solution([[5], [2], [3], [1], [0], [4]])
+        [True, False, False, False, True, True]
+        >>> find_solution([[1], [0]]) is None
+        True
+        >>> find_solution([[], []])
+        [True, False]
     '''
 
-    return []
+    n = len(implication_graph)
+
+    vertexes_counter = 0
+    scc_counter = 0
+    disc = [-1] * n
+    low = [-1] * n
+    vertices_stack = []
+    in_stack = [False] * n
+    scc_result = [-1] * n
+
+    def tarjan_scc(vertex: int):
+        nonlocal vertexes_counter
+        nonlocal scc_counter
+
+        disc[vertex] = vertexes_counter
+        low[vertex] = vertexes_counter
+        vertices_stack.append(vertex)
+        in_stack[vertex] = True
+        vertexes_counter += 1
+
+        for next_vertex in implication_graph[vertex]:
+            if disc[next_vertex] == -1:
+                tarjan_scc(next_vertex)
+                low[vertex] = min(low[vertex], low[next_vertex])
+            elif in_stack[next_vertex]:
+                low[vertex] = min(low[vertex], disc[next_vertex])
+
+        if low[vertex] == disc[vertex]:
+            while vertices_stack:
+                elem = vertices_stack[-1]
+
+                if low[elem] != disc[vertex]:
+                    break
+
+                scc_result[elem] = scc_counter
+                in_stack[elem] = False
+                vertices_stack.pop()
+
+            scc_counter += 1
+
+    for i in range(n):
+        if disc[i] == -1:
+            tarjan_scc(i)
+
+    result = [None] * n
+
+    for i in range(int(n / 2)):
+        if scc_result[i] == scc_result[int(n / 2) + i]:
+            return None
+
+        result[i] = scc_result[i] < scc_result[int(n / 2) + i]
+        result[int(n / 2) + i] = not result[i]
+
+    return result
+
+def color_graph(cnf_solution: list[bool] | None) -> list[int] | None:
+    '''
+    Returns graph colors as a list of numbers, one number per vertex,
+    each number is from 0 to 2 inclusively.
+    If such coloring is impossible, returns None
+
+    Args:
+        cnf_solution (list[int] | None): corresponding CNF solution,
+        which has 6*N vertexes and counts all necessary conditions for coloring
+        or None if solution does not exist
+
+    Returns:
+        (list[int] | None): list of graph vertexes colors, each number is from 0 to 2 inclusively
+        or None if such coloring is impossible
+
+    Examples:
+    >>> color_graph([True, False, False, False, True, True])
+    [0]
+    >>> color_graph([\
+        False, False, True, True, True, False,\
+        False, True, False, True, False, True\
+    ])
+    [2, 1]
+    '''
+
+    if cnf_solution is None:
+        return None
+
+    coloring = []
+    for i in range(0, len(cnf_solution), 6):
+        for j in range(0, 3):
+            if cnf_solution[i + j]:
+                coloring.append(j)
+                break
+
+    return coloring
 
 
 def write_file(graph: list[tuple[list[int], int]],
@@ -183,11 +320,13 @@ def main():
     '''
     graph = read_file("testfile.csv")
 
-    knf = create_knf(graph)
+    cnf = create_cnf(graph)
 
-    implication_graph = create_implication_graph(knf, len(graph) * 6)
+    implication_graph = create_implication_graph(cnf, len(graph) * 6)
 
-    colored_graph = color_graph(implication_graph)
+    cnf_solution = find_solution(implication_graph)
+
+    colored_graph = color_graph(cnf_solution)
 
     graph, colored_graph = generate_graph(20)
 
