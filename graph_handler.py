@@ -243,8 +243,10 @@ def write_file(graph: list[tuple[list[int], int]],
     
     '''
     colors = ["red", "green", "blue"]
-    colored_graph = [color if isinstance(color, int) else colors.index(color) \
-                     for color in colored_graph]
+    # if data comes from ui, you need to covert it to nums
+    if output_file:
+        colored_graph = [color if isinstance(color, int) else colors.index(color) \
+                        for color in colored_graph]
 
     edges = []
     for index, node in enumerate(graph):
