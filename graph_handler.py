@@ -1,7 +1,6 @@
 """
 Graph_coloring
 """
-
 import sys
 import random
 import matplotlib.pyplot as plt
@@ -229,7 +228,7 @@ def color_graph(cnf_solution: list[bool] | None) -> list[int] | None:
     return coloring
 
 def write_file(graph: list[tuple[list[int], int]],
-               colored_graph: list[int], output_file: str) -> None:
+               colored_graph: list[int], output_file: None|str) -> None:
     '''
     Writes a graph structure with color information to a text file.
 
@@ -241,18 +240,12 @@ def write_file(graph: list[tuple[list[int], int]],
 
     Returns:
         None
-
-    Examples:
-    # >>> import tempfile
-    # >>> graph = [([1, 2], 1), ([4, 5], 2)]
-    # >>> colored_graph = [1, 2]
-    # >>> with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
-    # ...     write_file(graph, colored_graph, tmpfile.name)
-    # ...     with open(tmpfile.name, "r", encoding="utf-8") as f:
-    # ...         print(f.read())
-    # 2 4
     
     '''
+    colors = ["red", "green", "blue"]
+    colored_graph = [color if isinstance(color, int) else colors.index(color) \
+                     for color in colored_graph]
+
     edges = []
     for index, node in enumerate(graph):
         for edge in node[0]:
@@ -260,11 +253,15 @@ def write_file(graph: list[tuple[list[int], int]],
                 edges.append(f"{index},{edge}")
 
     graph_txt = f"{len(graph)},{len(edges)}\n"
-    graph_txt += ",".join(str(node[1]) for node in graph) + "\n"
+    graph_txt += ",".join(map(str, colored_graph)) + "\n"
     graph_txt += "\n".join(edges)
 
-    with open(output_file, "w", encoding="utf-8") as file:
-        file.write(graph_txt.strip())
+    if output_file:
+        with open(output_file, "w", encoding="utf-8") as file:
+            file.write(graph_txt.strip())
+            return False
+    else:
+        return graph_txt.strip()
 
 def display_graph(graph: list[tuple[list[int], int]],
                   colored_graph: list[int]) -> None:
@@ -326,31 +323,42 @@ def generate_graph(num_nodes: int, density: int) -> list[tuple[list[int], int]]:
 
     return graph
 
-def main():
+def create_colored_graph(graph: list[tuple[list[int], int]]):
     '''
-    Main function
+    Func to process graph into colored graph
     '''
-
-    graph = generate_graph(10, 2)
 
     sys.setrecursionlimit(max(sys.getrecursionlimit(), len(graph) * 2))
 
     cnf = create_cnf(graph)
 
     implication_graph = create_implication_graph(cnf, len(graph) * 6)
-
     cnf_solution = find_solution(implication_graph)
 
     colored_graph = color_graph(cnf_solution)
 
-    # write_file(graph, colored_graph, "output_file.csv")
-
     if colored_graph is None:
-        print("Solution doesn't exist")
-    else:
-        display_graph(graph, colored_graph)
+        return False, "Solution for this input data - doesn't exists."
+    return True, colored_graph
 
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-    main()
+    graph_ = generate_graph(10, 2)
+    # graph_ = read_file("testfile.csv")
+
+    sys.setrecursionlimit(max(sys.getrecursionlimit(), len(graph_) * 2))
+
+    cnf_ = create_cnf(graph_)
+
+    implication_graph_ = create_implication_graph(cnf_, len(graph_) * 6)
+    cnf_solution_ = find_solution(implication_graph_)
+
+    colored_graph_ = color_graph(cnf_solution_)
+
+    write_file(graph_, colored_graph_, "output_file.csv")
+
+    if colored_graph_ is None:
+        print("Solution doesn't exist")
+    else:
+        display_graph(graph_, colored_graph_)
