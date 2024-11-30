@@ -33,17 +33,18 @@ def validate_graph_file(lines) -> tuple[True, str]:
     if not re.match(r"\d+,\d+", lines[0].strip()):
         return False, "First line must be 'nodes_num,edges_num' where both are integers."
 
-    # Validate the second line: colors
-    if not re.match(r"([0-2],)*[0-2]", lines[1].strip()):
-        return False, "Second line must be a comma-separated list of integers (0, 1, 2)."
+    if len(lines) < 50:
+        # Validate the second line: colors
+        if not re.match(r"([0-2],)*[0-2]", lines[1].strip()):
+            return False, "Second line must be a comma-separated list of integers (0, 1, 2)."
 
-    # Validate remaining lines: edges
-    edge_pattern = re.compile(r"\d+,\d+")
-    for line in lines[2:]:
-        if line == '':
-            continue
-        if not edge_pattern.match(line.strip()):
-            return False,f"Invalid edge format: '{line}'. Must be 'u,v' where u and v are integers."
+        # Validate remaining lines: edges
+        edge_pattern = re.compile(r"\d+,\d+")
+        for line in lines[2:]:
+            if line == '':
+                continue
+            if not edge_pattern.match(line.strip()):
+                return False,f"Invalid edge format: '{line}'. Must be 'u,v' where u and v are integers."
 
     return True, "Valid file."
 
@@ -51,16 +52,11 @@ def graph_from_data(nodes_num: int, edges: list[list[int]],\
                     oldcolors: list[int]):
     '''Transforms ,,data,, to ,,factorset,, which is out graph storage method'''
 
-    result = {num:set() for num in range(nodes_num)}
-    for _, edge in enumerate(edges):
-        for edge_ in edges:
-            intersec = set(edge).intersection(edge_)
-            for key in intersec:
-                result[key].add(edge_[0])
-                result[key].add(edge_[1])
-                result[key].difference_update({key})
-    result = [value for _, value in result.items()]
-    return [(list(result[index]), value) for index, value in enumerate(oldcolors)]
+    result = [[] for _ in range(nodes_num)]
+    for edge in edges:
+        result[edge[0]].append(edge[1])
+        result[edge[1]].append(edge[0])
+    return [(neighbors, oldcolors[i]) for i, neighbors in enumerate(result)]
 
 def draw_graph(nodes_num: int, edges: list[list[int]],\
                oldcolors: list[int]) -> bool:
@@ -88,6 +84,9 @@ def draw_graph(nodes_num: int, edges: list[list[int]],\
             g.add_edge(index, edge)
 
     # Draw the graph
+    if nodes_num > 1000:
+        return True, "File is to big to draw", write_file(graph, colored_graph, None)
+
     plt.figure(figsize=(8, 6))
     nx.draw(
         g,
@@ -179,6 +178,9 @@ def main() -> None:
                 else:
                     st.session_state.graph_content = content
                     st.session_state.graph_img = graph_image
+                    if isinstance(graph_image, str):
+                        st.error(graph_image)
+                        st.session_state.graph_img = -1
             else:
                 st.error("Please ensure the number of colors \
                         matches the number of nodes and the number of edges is valid.")
@@ -201,19 +203,24 @@ def main() -> None:
                     else:
                         st.session_state.graph_content = content
                         st.session_state.graph_img = graph_image
+                        if isinstance(graph_image, str):
+                            st.error(graph_image)
+                            st.session_state.graph_img = -1
             else:
                 st.error(msg)
 
     elif input_method == "Random":
         nodes_num = st.number_input("Number of nodes", min_value=1, step=1)
-        density = st.number_input("Density", min_value=1, step=1)
+        density = st.number_input("Density", min_value=0.0, max_value=1.0, step=0.1)
 
         if st.button("Draw Graph"):
             graph = generate_graph(nodes_num, density)
             edges = []
             for ind, node in enumerate(graph):
                 for edge in node[0]:
-                    edges.append([ind, edge])
+                    if ind < edge:
+                        edges.append([ind, edge])
+
             colors = list(map(lambda x: x[1], graph))
 
             success, graph_image, content = draw_graph(nodes_num, edges, colors)
@@ -222,13 +229,17 @@ def main() -> None:
             else:
                 st.session_state.graph_content = content
                 st.session_state.graph_img = graph_image
+                if isinstance(graph_image, str):
+                    st.error(graph_image)
+                    st.session_state.graph_img = -1
 
     if input_method != st.session_state.selected_method:
         st.session_state.graph_img = None
         st.session_state.selected_method = input_method
 
     if st.session_state.graph_img:
-        st.image(st.session_state.graph_img, caption="Graph Visualization")
+        if st.session_state.graph_img != -1:
+            st.image(st.session_state.graph_img, caption="Graph Visualization")
 
         st.download_button(
             label="Download colored graph",
