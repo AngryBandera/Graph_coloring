@@ -1,10 +1,10 @@
 'Server to run website to display graph'
 
 import re
+from io import BytesIO
 import streamlit as st
 import networkx as nx
 import matplotlib.pyplot as plt
-from io import BytesIO
 from graph_handler import create_colored_graph, write_file, generate_graph
 
 def validate_graph_file(lines) -> tuple[True, str]:
@@ -94,7 +94,7 @@ def draw_graph(nodes_num: int, edges: list[list[int]],\
         with_labels=True,
         labels={index:str(colors[c][0]) for index, c in enumerate(oldcolors)},
         node_color=colored_graph,
-        node_size=500,
+        node_size=max(500-(nodes_num/50) * 100, 50),
         font_size=10,
         font_color="white",
     )
@@ -134,6 +134,8 @@ def main() -> None:
         st.session_state.graph_img = None
     if "graph_content" not in st.session_state:
         st.session_state.graph_content = None
+    if "selected_method" not in st.session_state:
+        st.session_state.selected_method = None
 
     input_method = st.radio("How would you like to input the graph?", \
                                 ("Upload File", "Manual", "Random"))
@@ -220,6 +222,10 @@ def main() -> None:
             else:
                 st.session_state.graph_content = content
                 st.session_state.graph_img = graph_image
+
+    if input_method != st.session_state.selected_method:
+        st.session_state.graph_img = None
+        st.session_state.selected_method = input_method
 
     if st.session_state.graph_img:
         st.image(st.session_state.graph_img, caption="Graph Visualization")
