@@ -44,7 +44,7 @@ def validate_graph_file(lines) -> tuple[True, str]:
             if line == '':
                 continue
             if not edge_pattern.match(line.strip()):
-                return False,f"Invalid edge format: '{line}'. Must be 'u,v' where u and v are integers."
+                return False, f"Invalid edge format: '{line}'. Must be 'u,v' where u and v are integers."
 
     return True, "Valid file."
 
