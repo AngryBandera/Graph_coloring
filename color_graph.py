@@ -10,6 +10,7 @@ def main():
     """
     Main interaction function
     """
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--visualizator", dest="visualizator", action='store_true')

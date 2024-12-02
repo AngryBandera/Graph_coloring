@@ -1,13 +1,13 @@
 """
 Graph_coloring
 """
+
 import sys
 import random
-import matplotlib.pyplot as plt
-import networkx as nx
 
 def read_file(filepath: str) -> list[tuple[list[int], int]]:
-    """_summary_
+    """
+    Reads graph from file
 
     Args:
         filepath (str): path to file
@@ -16,7 +16,8 @@ def read_file(filepath: str) -> list[tuple[list[int], int]]:
         list[tuple[list[int], int]]: list with vertex and colors
     >>> read_file(123)
     False
-    """ 
+    """
+
     if not isinstance(filepath, str):
         return False
     final = []
