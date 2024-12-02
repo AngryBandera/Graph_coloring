@@ -12,12 +12,12 @@ def main():
     """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--visualize", dest="visualize", action='store_true')
+    parser.add_argument("--visualizator", dest="visualizator", action='store_true')
     parser.add_argument("-i", dest="input_file")
     parser.add_argument("-o", dest="output_file")
 
     args = parser.parse_args()
-    if args.visualize:
+    if args.visualizator:
         cli.main_run(["server.py"])
         return
 
