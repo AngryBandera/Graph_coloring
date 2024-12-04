@@ -11,7 +11,7 @@ cd Graph_coloring
 ```
 
 ```
-sudo pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 ## Activate streamlit 
 ```
